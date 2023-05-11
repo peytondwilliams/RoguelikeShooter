@@ -1,0 +1,58 @@
+[gd_scene load_steps=9 format=3 uid="uid://cvq8n42ixf3n6"]
+
+[ext_resource type="Script" path="res://Nodes/Player/player.gd" id="1_gi17p"]
+[ext_resource type="Texture2D" uid="uid://cm8b66obkvbi3" path="res://icon.svg" id="2_g6o8d"]
+[ext_resource type="Script" path="res://Nodes/Player/SmoothCamera.gd" id="3_fgjxv"]
+
+[sub_resource type="PhysicsMaterial" id="PhysicsMaterial_5qipk"]
+friction = 0.1
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_hfl4v"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lprmk"]
+albedo_texture = ExtResource("2_g6o8d")
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_7gs0g"]
+albedo_color = Color(0.494118, 0.992157, 0.176471, 1)
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_sroqw"]
+material = SubResource("StandardMaterial3D_7gs0g")
+
+[node name="Player" type="RigidBody3D"]
+mass = 100.0
+physics_material_override = SubResource("PhysicsMaterial_5qipk")
+gravity_scale = 0.0
+continuous_cd = true
+max_contacts_reported = 1
+contact_monitor = true
+lock_rotation = true
+linear_damp_mode = 1
+script = ExtResource("1_gi17p")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_hfl4v")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+material_override = SubResource("StandardMaterial3D_lprmk")
+mesh = SubResource("CapsuleMesh_sroqw")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.55872, 0)
+
+[node name="h" type="Node3D" parent="Head"]
+
+[node name="v" type="Node3D" parent="Head/h"]
+
+[node name="CameraMount" type="Marker3D" parent="Head/h/v"]
+
+[node name="GroundRay" type="RayCast3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.064793, 0)
+
+[node name="SmoothCamFolder" type="Node3D" parent="."]
+
+[node name="SmoothCamera" type="Camera3D" parent="SmoothCamFolder"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.6076, -0.0671021)
+script = ExtResource("3_fgjxv")
+follow_target = NodePath("../../Head/h/v/CameraMount")
