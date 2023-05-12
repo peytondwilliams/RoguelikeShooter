@@ -24,6 +24,7 @@ const TARGET_SPEED = 5.0
 # new vars
 
 var is_grounded = true
+var is_jumping = false
 var accel = 0.5
 var air_control = 0.25
 
@@ -88,51 +89,62 @@ func _integrate_forces(state):
 	var direction = Vector3()
 	direction += move_input.x * head.global_transform.basis.x;
 	direction += move_input.y * head.global_transform.basis.z;
-
-	var goal_vel = direction * 10 * 1
-	var vel_diff_dot = goal_vel.dot(state.get_linear_velocity())
-	var new_accel = accel * vel_diff_factor(vel_diff_dot)
 	
-	goal_vel = goal_vel.move_toward(goal_vel + state.get_linear_velocity(), new_accel * state.step)		
+	var lin_vel = state.get_linear_velocity()
+	var lin_vel_no_y = Vector3(lin_vel.x, 0, lin_vel.z)
+
+	
+	if Input.is_action_pressed("jump") and is_grounded and $JumpTimer.is_stopped():
+		$JumpTimer.start()
+		if lin_vel.y < 0:
+			state.set_linear_velocity(lin_vel_no_y)
+			lin_vel = lin_vel_no_y
+		state.apply_central_impulse(Vector3(0, 1, 0) * mass * 16)
+
+	var goal_vel_factor = 10
+	if Input.is_action_pressed("sprint"):
+		goal_vel_factor = 15
+		
+	var goal_vel = direction * goal_vel_factor
+	#var vel_diff_dot = goal_vel.dot(lin_vel) old non-normalized diff
+	
+	var horz_vel_dot_normal = goal_vel.normalized().dot(lin_vel_no_y.normalized())
+	
+	var new_accel = accel * vel_diff_factor(horz_vel_dot_normal)
+	
+	goal_vel = goal_vel.move_toward(goal_vel + lin_vel, new_accel * state.step)		
 
 	var neededAccel = Vector3()
 
+
 	if is_grounded:
-		neededAccel = ((goal_vel - state.get_linear_velocity()) / state.step)
+		neededAccel = ((goal_vel - lin_vel) / state.step)
+		linear_damp = 1
 	else:
-		var linear_vel_no_y = Vector3(state.get_linear_velocity().x, 0, state.get_linear_velocity().z)
-		neededAccel = ((goal_vel - linear_vel_no_y) / state.step)
+		linear_damp = 0
+		neededAccel = ((goal_vel - lin_vel_no_y) / state.step)
 	neededAccel *= .1
 	# missing needAccel cap
 	
-	state.apply_central_force(Vector3(0, -9.8, 0) * mass * 10)
+	#apply gravity
+	var gravity_factor = 3
+	if not is_grounded and abs(lin_vel.y) < 3:
+		gravity_factor = 2
+		
+	state.apply_central_force(Vector3(0, -9.8, 0) * mass * gravity_factor)
 
+	#apply final logic
 	float_capsule(state)
-	move(neededAccel, state)
+	move(direction, neededAccel, horz_vel_dot_normal, state)
 
-	#print(state.get_linear_velocity())
-#	var vel = Vector3()
-#
-#
-#	var curr_linear_vel = state.get_linear_velocity()
-#
-#
-#	if is_grounded:
-#		# keep vertical vel to avoid accel. on slopes
-#		vel = curr_linear_vel
-#		# add code for contacting body
-#	else:
-#		#Ignore y velocity in air
-#		vel = Vector3(curr_linear_vel.x, 0, curr_linear_vel.z)
 
 		
 func float_capsule(state):
-	if groundRay.is_colliding():
+	if groundRay.is_colliding() and $JumpTimer.is_stopped():
 		var vel = state.get_linear_velocity()
 		
 		var ray_hit_len = groundRay.global_transform.origin.y - groundRay.get_collision_point().y
 		var height_diff = ray_hit_len - 0.8
-		
 		var down_vel_dot = groundRay.target_position.normalized().dot(vel)
 		
 		var springForce = (height_diff * 30) - (down_vel_dot * 2)
@@ -141,15 +153,29 @@ func float_capsule(state):
 	
 
 
-func move(direction, state):
-	#print(direction)
-	#causing problems with gravity
+func move(direction, neededAccel, horz_dot, state):	
+	
+	var lin_horz_vel = Vector3(state.get_linear_velocity().x, 0, state.get_linear_velocity().z)
+	
 	if is_grounded:
 		var slope_check = 0
-		state.apply_central_force(direction * mass)
+		
+		state.apply_central_force(neededAccel * mass)
 		
 	else:
-		state.apply_central_force(direction * mass * air_control)
+		if (horz_dot > 0.98 or horz_dot == 0) and lin_horz_vel.length() > 3:
+			#horz_dot == 0 allows no slow down in air when no input
+		
+			# keep all horizontal movement
+			var dir_n = direction.normalized()
+			var linear_vel_no_y = Vector3(state.get_linear_velocity().x, 0, state.get_linear_velocity().z)
+			dir_n *= linear_vel_no_y.length()
+			dir_n += Vector3(0, state.get_linear_velocity().y, 0)
+
+			if Vector3(dir_n.x, 0, dir_n.z).length() > 0.1:
+				state.set_linear_velocity(dir_n)
+		else:
+			state.apply_central_force(neededAccel * mass * air_control)
 
 func set_friction():
 	pass

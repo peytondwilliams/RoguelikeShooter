@@ -18,7 +18,7 @@ reflected_light_source = 1
 [node name="TestWorld" type="Node3D"]
 
 [node name="Player" parent="." instance=ExtResource("1_l3b7c")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.786739)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.224331)
 
 [node name="CSGBox3D" type="CSGBox3D" parent="."]
 material_override = SubResource("StandardMaterial3D_7i71u")
